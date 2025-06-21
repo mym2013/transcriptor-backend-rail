@@ -1,0 +1,34 @@
+# General
+.DS_Store
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# dotenv
+.env
+
+# Logs
+logs/
+*.log
+
+# Compilados
+dist/
+build/
+
+# VSCode settings
+.vscode/
+
+# Sistema operativo
+*.swp
+
+# Archivos generados
+audio.mp3
+transcripcion.txt
+
+# Next.js build
+.next/
+out/
