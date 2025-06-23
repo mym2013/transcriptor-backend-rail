@@ -36,8 +36,6 @@ app.post('/transcribir', async (req, res) => {
       return res.status(500).json({ error: 'Error al descargar audio' });
     }
 
-    console.log('✅ Descarga finalizada correctamente');
-
     try {
       const OpenAI = require('openai');
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -50,15 +48,16 @@ app.post('/transcribir', async (req, res) => {
 
       const outputPath = path.join(__dirname, 'transcripcion.txt');
       fs.writeFileSync(outputPath, transcription);
-      console.log('✅ Transcripción completada');
       return res.json({ message: 'Transcripción lista', file: 'transcripcion.txt' });
 
     } catch (err) {
-      console.error('❌ Error al transcribir:', err);
+      console.error('Error al transcribir:', err);
       return res.status(500).json({ error: 'Error al transcribir el audio' });
     }
   });
 });
+
+app.use(express.static(__dirname));
 
 const PORT = 3001;
 app.listen(PORT, () => {

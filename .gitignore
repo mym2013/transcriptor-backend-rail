@@ -32,3 +32,9 @@ transcripcion.txt
 # Next.js build
 .next/
 out/
+
+
+
+# Ignorar herramientas ejecutables
+herramientas/ffmpeg/
+herramientas/yt-dlp/
