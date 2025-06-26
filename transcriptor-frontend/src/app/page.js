@@ -3,11 +3,13 @@
 import { useState } from 'react';
 
 export default function Home() {
+  // ✅✔️ Estado para URL, transcripción, carga y errores
   const [url, setUrl] = useState('');
   const [transcripcion, setTranscripcion] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
+  // ✅✔️ Función manejarTranscripcion
   const manejarTranscripcion = async () => {
     setCargando(true);
     setTranscripcion('');
@@ -48,6 +50,7 @@ export default function Home() {
       />
 
       <div className="flex flex-wrap gap-2 mb-4">
+        {/* ✅✔️ Botón "Transcribir" */}
         <button
           onClick={manejarTranscripcion}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
@@ -56,6 +59,7 @@ export default function Home() {
           {cargando ? 'Procesando...' : 'Transcribir'}
         </button>
 
+        {/* ✅✔️ Botón "🔄 Borrar URL" */}
         {url && (
           <button
             onClick={() => {
@@ -70,12 +74,14 @@ export default function Home() {
         )}
       </div>
 
+      {/* ✅✔️ Manejo de errores */}
       {error && (
         <p className="mt-4 text-red-600">
           ⚠️ {error}
         </p>
       )}
 
+      {/* ✅✔️ Sección de Transcripción + Botón Descargar */}
       {transcripcion && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
@@ -84,6 +90,8 @@ export default function Home() {
           <div className="bg-white p-4 rounded shadow overflow-y-auto max-h-[400px] border border-gray-300 whitespace-pre-wrap text-sm">
             {transcripcion}
           </div>
+
+          {/* ✅✔️ Botón "📥 Descargar TXT" */}
           <button
             onClick={() => {
               const blob = new Blob([transcripcion], { type: 'text/plain' });
