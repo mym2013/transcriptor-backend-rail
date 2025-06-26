@@ -1,74 +1,79 @@
-"use client";
-import { useState } from "react";
+'use client';
+
+import { useState } from 'react';
 
 export default function Home() {
-  const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [transcripcion, setTranscripcion] = useState("");
+  const [url, setUrl] = useState('');
+  const [transcripcion, setTranscripcion] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage("");
-    setTranscripcion("");
+  const manejarTranscripcion = async () => {
+    setCargando(true);
+    setTranscripcion('');
+    setError('');
 
     try {
-      const res = await fetch("http://localhost:3001/transcribir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+      const respuesta = await fetch('http://localhost:3001/transcribir', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url })
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        setMessage(`✅ Archivo generado: ${data.file}`);
-        // ✅ Aquí accedemos al backend directamente
-        const txtRes = await fetch("http://localhost:3001/transcripcion.txt");
-        const textoPlano = await txtRes.text();
-        setTranscripcion(textoPlano);
-      } else {
-        setMessage("❌ " + (data.error || "Error al transcribir el audio"));
+      if (!respuesta.ok) {
+        throw new Error('Error al transcribir el video');
       }
+
+      const datos = await respuesta.json();
+      setTranscripcion(datos.transcripcion);
     } catch (err) {
-      setMessage("❌ Error de red o servidor no disponible.");
+      setError(err.message || 'Error desconocido');
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   };
 
   return (
-    <main className="flex flex-col items-center justify-start min-h-screen bg-gray-100 p-6">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-        Transcriptor de YouTube 🎙️
-      </h1>
+    <main className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Transcriptor de YouTube</h1>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-xl bg-white p-6 rounded shadow">
-        <label className="block text-gray-700 font-bold mb-2">
-          URL del video de YouTube:
-        </label>
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://www.youtube.com/watch?v=..."
-          className="w-full px-3 py-2 mb-4 border border-gray-400 rounded text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+      <input
+        type="text"
+        placeholder="Pega la URL del video de YouTube"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        className="w-full p-2 border border-gray-300 rounded mb-4"
+      />
+
+      <div className="flex flex-wrap gap-2 mb-4">
         <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
-          disabled={loading}
+          onClick={manejarTranscripcion}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          disabled={cargando || !url}
         >
-          {loading ? "Procesando..." : "Transcribir"}
+          {cargando ? 'Procesando...' : 'Transcribir'}
         </button>
-      </form>
 
-      {message && (
-        <div className="mt-4 text-center text-sm font-medium text-gray-700">
-          {message}
-        </div>
+        {url && (
+          <button
+            onClick={() => {
+              setUrl('');
+              setTranscripcion('');
+              setError('');
+            }}
+            className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+          >
+            🔄 Borrar URL
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <p className="mt-4 text-red-600">
+          ⚠️ {error}
+        </p>
       )}
 
       {transcripcion && (
@@ -79,6 +84,20 @@ export default function Home() {
           <div className="bg-white p-4 rounded shadow overflow-y-auto max-h-[400px] border border-gray-300 whitespace-pre-wrap text-sm">
             {transcripcion}
           </div>
+          <button
+            onClick={() => {
+              const blob = new Blob([transcripcion], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'transcripcion.txt';
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            📥 Descargar TXT
+          </button>
         </div>
       )}
     </main>
