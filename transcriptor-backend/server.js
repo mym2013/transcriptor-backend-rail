@@ -47,8 +47,8 @@ app.post('/transcribir', async (req, res) => {
       });
 
       const outputPath = path.join(__dirname, 'transcripcion.txt');
-      fs.writeFileSync(outputPath, transcription);
-      return res.json({ message: 'Transcripción lista', file: 'transcripcion.txt' });
+     fs.writeFileSync(outputPath, transcription);
+return res.json({ transcripcion: transcription });
 
     } catch (err) {
       console.error('Error al transcribir:', err);
