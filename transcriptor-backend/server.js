@@ -6,7 +6,17 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+
+/*
+// 🚀 PRODUCCIÓN: SOLO PERMITIR VERCEL
+app.use(cors({
+  origin: 'https://transcriptor-app.vercel.app'
+}));
+*/
+
+// 🛠 DESARROLLO LOCAL: PERMITIR TODOS LOS ORÍGENES
 app.use(cors());
+
 app.use(express.json());
 
 app.post('/transcribir', async (req, res) => {
@@ -47,8 +57,9 @@ app.post('/transcribir', async (req, res) => {
       });
 
       const outputPath = path.join(__dirname, 'transcripcion.txt');
-     fs.writeFileSync(outputPath, transcription);
-return res.json({ transcripcion: transcription });
+      fs.writeFileSync(outputPath, transcription);
+
+      return res.json({ transcripcion: transcription });
 
     } catch (err) {
       console.error('Error al transcribir:', err);
@@ -63,4 +74,5 @@ const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
+
 
