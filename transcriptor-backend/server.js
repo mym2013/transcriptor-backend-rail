@@ -7,7 +7,7 @@ const fs = require('fs');
 
 const app = express();
 
-// 🚀 CORS manual global
+// CORS global
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://transcriptor-app.vercel.app');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -27,7 +27,6 @@ app.post('/transcribir', async (req, res) => {
 
   try {
     console.log(`Descargando audio de ${url}...`);
-    // ✅ Descargar con ytdlp (sin spawn)
     await ytdlp(url, {
       extractAudio: true,
       audioFormat: 'mp3',
