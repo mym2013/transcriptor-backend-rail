@@ -1,4 +1,5 @@
 const express = require('express');
+// Si quieres puedes dejar 'cors' instalado pero ya no lo usarás
 const cors = require('cors');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -7,22 +8,12 @@ require('dotenv').config();
 
 const app = express();
 
-/*
-// 🚀 Si quieres permitir solo un dominio específico (por ejemplo tu frontend de Vercel), usa este bloque:
-app.use(cors({
-  origin: 'https://transcriptor-app.vercel.app'
-}));
-*/
-
-// 🟢 Este es el bloque que debes activar en producción:
-app.use(cors({
-  origin: 'https://transcriptor-app.vercel.app'
-}));
-
-/*
-// 🛠 Si quieres permitir todos los orígenes durante pruebas locales, usa este:
-// app.use(cors());
-*/
+// 🚀 CORS manual global que aplica a todas las rutas y todos los estados de respuesta
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://transcriptor-app.vercel.app');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 app.use(express.json());
 
