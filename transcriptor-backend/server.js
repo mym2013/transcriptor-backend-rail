@@ -8,14 +8,21 @@ require('dotenv').config();
 const app = express();
 
 /*
-// 🚀 PRODUCCIÓN: SOLO PERMITIR VERCEL
+// 🚀 Si quieres permitir solo un dominio específico (por ejemplo tu frontend de Vercel), usa este bloque:
 app.use(cors({
   origin: 'https://transcriptor-app.vercel.app'
 }));
 */
 
-// 🛠 DESARROLLO LOCAL: PERMITIR TODOS LOS ORÍGENES
-app.use(cors());
+// 🟢 Este es el bloque que debes activar en producción:
+app.use(cors({
+  origin: 'https://transcriptor-app.vercel.app'
+}));
+
+/*
+// 🛠 Si quieres permitir todos los orígenes durante pruebas locales, usa este:
+// app.use(cors());
+*/
 
 app.use(express.json());
 
@@ -74,5 +81,6 @@ const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
+
 
 
