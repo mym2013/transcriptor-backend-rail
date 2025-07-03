@@ -3,24 +3,20 @@
 import { useState, useEffect } from 'react';
 
 export default function Home() {
-  // ✅ Estados principales
   const [url, setUrl] = useState('');
   const [transcripcion, setTranscripcion] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [history, setHistory] = useState([]);
 
-  // ✅ Cargar historial al iniciar
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('urlHistory') || '[]');
     setHistory(saved);
   }, []);
 
-  // ✅ Función transcribir
   const manejarTranscripcion = async () => {
     if (!url) return;
 
-    // Actualizar historial
     const newHistory = [url, ...history.filter((u) => u !== url)].slice(0, 5);
     localStorage.setItem('urlHistory', JSON.stringify(newHistory));
     setHistory(newHistory);
@@ -30,7 +26,7 @@ export default function Home() {
     setError('');
 
     try {
-      const respuesta = await fetch('http://localhost:3001/transcribir', {
+      const respuesta = await fetch('https://transcriptor-backend-vkdb.onrender.com/transcribir', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -55,7 +51,6 @@ export default function Home() {
     <main className="max-w-xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">Transcriptor de YouTube</h1>
 
-      {/* ✅ Input URL */}
       <input
         type="text"
         placeholder="Pega la URL del video de YouTube"
@@ -64,7 +59,6 @@ export default function Home() {
         className="w-full p-2 border border-gray-300 rounded mb-4"
       />
 
-      {/* ✅ Botones */}
       <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={manejarTranscripcion}
@@ -88,7 +82,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* ✅ Historial */}
       {history.length > 0 && (
         <div className="mb-4">
           <p className="font-semibold mb-2">🕘 Historial reciente:</p>
@@ -106,14 +99,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* ✅ Manejo de errores */}
       {error && (
         <p className="mt-4 text-red-600">
           ⚠️ {error}
         </p>
       )}
 
-      {/* ✅ Transcripción y descarga */}
       {transcripcion && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
@@ -142,3 +133,4 @@ export default function Home() {
     </main>
   );
 }
+
