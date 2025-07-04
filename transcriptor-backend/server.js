@@ -2,12 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const ytdlp = require('yt-dlp-exec'); // ✅ Nuevo import limpio
 require('dotenv').config();
+const { spawn } = require('child_process');
 
 const app = express();
 
-// 🚀 CORS seguro para Vercel
+// 🚀 CORS para Vercel
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://transcriptor-app.vercel.app');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -23,39 +23,52 @@ app.post('/transcribir', async (req, res) => {
     return res.status(400).json({ error: 'URL no proporcionada' });
   }
 
-  // Ruta absoluta al archivo MP3
   const audioPath = path.join(__dirname, 'audio.mp3');
 
-  try {
-    console.log('Descargando audio con yt-dlp...');
-    await ytdlp(url, {
-      extractAudio: true,
-      audioFormat: 'mp3',
-      output: audioPath
-    });
-    console.log('✅ Audio descargado correctamente.');
+  console.log('✅ Descargando audio con yt-dlp global...');
+  const ytDlp = spawn('yt-dlp', [
+    '-x',
+    '--audio-format', 'mp3',
+    '-o', audioPath,
+    url
+  ]);
 
-    const OpenAI = require('openai');
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  ytDlp.stdout.on('data', data => {
+    console.log(`yt-dlp stdout: ${data}`);
+  });
 
-    console.log('Transcribiendo audio con Whisper...');
-    const transcription = await openai.audio.transcriptions.create({
-      file: fs.createReadStream(audioPath),
-      model: 'whisper-1',
-      response_format: 'text'
-    });
+  ytDlp.stderr.on('data', data => {
+    console.error(`yt-dlp stderr: ${data}`);
+  });
 
-    console.log('✅ Transcripción completada.');
+  ytDlp.on('close', async code => {
+    if (code !== 0) {
+      console.error(`yt-dlp terminó con código ${code}`);
+      return res.status(500).json({ error: 'Error al descargar audio' });
+    }
 
-    const outputPath = path.join(__dirname, 'transcripcion.txt');
-    fs.writeFileSync(outputPath, transcription);
+    try {
+      console.log('✅ Audio descargado correctamente.');
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    return res.json({ transcripcion: transcription });
+      console.log('✅ Transcribiendo audio con Whisper...');
+      const transcription = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(audioPath),
+        model: 'whisper-1',
+        response_format: 'text'
+      });
 
-  } catch (err) {
-    console.error('❌ Error en proceso:', err);
-    return res.status(500).json({ error: 'Error al procesar el video. Revisa logs.' });
-  }
+      fs.writeFileSync(path.join(__dirname, 'transcripcion.txt'), transcription);
+      console.log('✅ Transcripción completa.');
+
+      return res.json({ transcripcion: transcription });
+
+    } catch (err) {
+      console.error('Error al transcribir:', err);
+      return res.status(500).json({ error: 'Error al transcribir el audio' });
+    }
+  });
 });
 
 const PORT = process.env.PORT || 3001;
