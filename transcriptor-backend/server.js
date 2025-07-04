@@ -1,13 +1,13 @@
 const express = require('express');
-const { createWriteStream } = require('fs');
-const path = require('path');
-require('dotenv').config();
-const ytdlp = require('yt-dlp-exec');
+const cors = require('cors');
 const fs = require('fs');
+const path = require('path');
+const ytdlp = require('yt-dlp-exec'); // ✅ Nuevo import limpio
+require('dotenv').config();
 
 const app = express();
 
-// CORS global
+// 🚀 CORS seguro para Vercel
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://transcriptor-app.vercel.app');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -23,36 +23,38 @@ app.post('/transcribir', async (req, res) => {
     return res.status(400).json({ error: 'URL no proporcionada' });
   }
 
+  // Ruta absoluta al archivo MP3
   const audioPath = path.join(__dirname, 'audio.mp3');
 
   try {
-    console.log(`Descargando audio de ${url}...`);
+    console.log('Descargando audio con yt-dlp...');
     await ytdlp(url, {
       extractAudio: true,
       audioFormat: 'mp3',
       output: audioPath
     });
-    console.log('Descarga completada.');
+    console.log('✅ Audio descargado correctamente.');
 
     const OpenAI = require('openai');
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    console.log('Enviando audio a OpenAI...');
+    console.log('Transcribiendo audio con Whisper...');
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(audioPath),
       model: 'whisper-1',
       response_format: 'text'
     });
 
+    console.log('✅ Transcripción completada.');
+
     const outputPath = path.join(__dirname, 'transcripcion.txt');
     fs.writeFileSync(outputPath, transcription);
-    console.log('Transcripción generada y guardada.');
 
     return res.json({ transcripcion: transcription });
 
   } catch (err) {
-    console.error('Error:', err);
-    return res.status(500).json({ error: 'Error al procesar el video' });
+    console.error('❌ Error en proceso:', err);
+    return res.status(500).json({ error: 'Error al procesar el video. Revisa logs.' });
   }
 });
 
