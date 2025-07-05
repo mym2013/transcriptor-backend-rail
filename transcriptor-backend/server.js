@@ -32,12 +32,12 @@ app.post('/transcribir', async (req, res) => {
 
   console.log('✅ Descargando audio con yt-dlp...');
   const ytdlp = spawn('yt-dlp', [
-    url,
-    '-f',
-    'bestaudio',
-    '-o',
-    'audio.%(ext)s'
-  ]);
+  url,
+  '--extract-audio',
+  '--audio-format', 'mp3',
+  '-o', 'audio.mp3'
+]);
+
 
   ytdlp.stdout.on('data', data => {
     console.log(`yt-dlp stdout: ${data}`);
