@@ -31,12 +31,15 @@ app.post('/transcribir', async (req, res) => {
   const audioPath = path.join(__dirname, 'audio.mp3');
 
   console.log('✅ Descargando audio con yt-dlp...');
-  const ytdlp = spawn('yt-dlp', [
+ const ytdlp = spawn('yt-dlp', [
   url,
   '--extract-audio',
   '--audio-format', 'mp3',
+  '--force-overwrites',
+  '--no-cache-dir',
   '-o', 'audio.mp3'
 ]);
+
 
 
   ytdlp.stdout.on('data', data => {
