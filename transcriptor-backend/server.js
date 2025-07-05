@@ -7,9 +7,14 @@ const { spawn } = require('child_process');
 
 const app = express();
 
-// 🚀 CORS para Vercel
+/**
+ * ===========================
+ * 🔹 CORS CONFIGURACIÓN
+ * ===========================
+ * LOCALHOST ACTIVADO
+ */
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://transcriptor-app.vercel.app');
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   next();
 });
@@ -25,23 +30,24 @@ app.post('/transcribir', async (req, res) => {
 
   const audioPath = path.join(__dirname, 'audio.mp3');
 
-  console.log('✅ Descargando audio con yt-dlp global...');
-  const ytDlp = spawn('yt-dlp', [
-    '-x',
-    '--audio-format', 'mp3',
-    '-o', audioPath,
-    url
+  console.log('✅ Descargando audio con yt-dlp...');
+  const ytdlp = spawn('yt-dlp', [
+    url,
+    '-f',
+    'bestaudio',
+    '-o',
+    'audio.%(ext)s'
   ]);
 
-  ytDlp.stdout.on('data', data => {
+  ytdlp.stdout.on('data', data => {
     console.log(`yt-dlp stdout: ${data}`);
   });
 
-  ytDlp.stderr.on('data', data => {
+  ytdlp.stderr.on('data', data => {
     console.error(`yt-dlp stderr: ${data}`);
   });
 
-  ytDlp.on('close', async code => {
+  ytdlp.on('close', async code => {
     if (code !== 0) {
       console.error(`yt-dlp terminó con código ${code}`);
       return res.status(500).json({ error: 'Error al descargar audio' });

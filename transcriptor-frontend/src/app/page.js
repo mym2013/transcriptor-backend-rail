@@ -1,136 +1,94 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function Home() {
   const [url, setUrl] = useState('');
   const [transcripcion, setTranscripcion] = useState('');
-  const [cargando, setCargando] = useState(false);
+  const [historial, setHistorial] = useState([]);
   const [error, setError] = useState('');
-  const [history, setHistory] = useState([]);
-
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('urlHistory') || '[]');
-    setHistory(saved);
-  }, []);
+  const [cargando, setCargando] = useState(false);
 
   const manejarTranscripcion = async () => {
-    if (!url) return;
+    setError('');
+    setTranscripcion('');
 
-    const newHistory = [url, ...history.filter((u) => u !== url)].slice(0, 5);
-    localStorage.setItem('urlHistory', JSON.stringify(newHistory));
-    setHistory(newHistory);
+    if (!url) {
+      setError('Por favor ingresa una URL.');
+      return;
+    }
 
     setCargando(true);
-    setTranscripcion('');
-    setError('');
 
     try {
-      const respuesta = await fetch('https://transcriptor-backend-vkdb.onrender.com/transcribir', {
+      const response = await fetch('http://localhost:3001/transcribir', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
 
-      if (!respuesta.ok) {
-        throw new Error('Error al transcribir el video');
+      if (!response.ok) {
+        throw new Error('Error al procesar la transcripción.');
       }
 
-      const datos = await respuesta.json();
-      setTranscripcion(datos.transcripcion);
+      const data = await response.json();
+      setTranscripcion(data.transcripcion);
+      setHistorial([url, ...historial.slice(0, 4)]);
+      setUrl('');
     } catch (err) {
-      setError(err.message || 'Error desconocido');
+      setError(err.message);
     } finally {
       setCargando(false);
     }
   };
 
   return (
-    <main className="max-w-xl mx-auto p-6">
+    <main className="max-w-2xl mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-4">Transcriptor de YouTube</h1>
-
-      <input
-        type="text"
-        placeholder="Pega la URL del video de YouTube"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        className="w-full p-2 border border-gray-300 rounded mb-4"
-      />
-
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Pega la URL de YouTube"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="flex-1 border p-2 rounded"
+        />
         <button
           onClick={manejarTranscripcion}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          disabled={cargando || !url}
+          disabled={cargando}
+          className="bg-blue-600 text-white px-4 py-2 rounded"
         >
           {cargando ? 'Procesando...' : 'Transcribir'}
         </button>
-
-        {url && (
-          <button
-            onClick={() => {
-              setUrl('');
-              setTranscripcion('');
-              setError('');
-            }}
-            className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
-          >
-            🔄 Borrar URL
-          </button>
-        )}
       </div>
 
-      {history.length > 0 && (
+      {error && (
+        <p className="text-red-600 mb-4">⚠️ {error}</p>
+      )}
+
+      {transcripcion && (
         <div className="mb-4">
-          <p className="font-semibold mb-2">🕘 Historial reciente:</p>
-          <ul className="list-disc pl-5 space-y-1 text-sm">
-            {history.map((u, idx) => (
-              <li
-                key={idx}
-                className="cursor-pointer text-blue-600 hover:underline"
-                onClick={() => setUrl(u)}
-              >
-                {u}
+          <h2 className="font-semibold mb-2">Transcripción:</h2>
+          <pre className="whitespace-pre-wrap bg-gray-100 p-2 rounded">{transcripcion}</pre>
+        </div>
+      )}
+
+      {historial.length > 0 && (
+        <div className="mb-4">
+          <h2 className="font-semibold mb-2">Historial reciente:</h2>
+          <ul className="list-disc pl-5 space-y-1">
+            {historial.map((item, index) => (
+              <li key={index}>
+                <a href={item} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  {item}
+                </a>
               </li>
             ))}
           </ul>
         </div>
       )}
-
-      {error && (
-        <p className="mt-4 text-red-600">
-          ⚠️ {error}
-        </p>
-      )}
-
-      {transcripcion && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-            📝 Transcripción:
-          </h2>
-          <div className="bg-white p-4 rounded shadow overflow-y-auto max-h-[400px] border border-gray-300 whitespace-pre-wrap text-sm">
-            {transcripcion}
-          </div>
-
-          <button
-            onClick={() => {
-              const blob = new Blob([transcripcion], { type: 'text/plain' });
-              const downloadUrl = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = downloadUrl;
-              a.download = 'transcripcion.txt';
-              a.click();
-              URL.revokeObjectURL(downloadUrl);
-            }}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            📥 Descargar TXT
-          </button>
-        </div>
-      )}
     </main>
   );
 }
+
 
