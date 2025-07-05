@@ -38,3 +38,8 @@ out/
 # Ignorar herramientas ejecutables
 herramientas/ffmpeg/
 herramientas/yt-dlp/
+
+# Documentación y datos sensibles
+decision_ramas_transcriptor.pdf
+www.youtube.com_cookies.txt
+*Documento de Cierre de Fase.txt
