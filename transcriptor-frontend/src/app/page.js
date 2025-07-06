@@ -5,13 +5,16 @@ import { useState } from 'react';
 export default function Home() {
   const [url, setUrl] = useState('');
   const [transcripcion, setTranscripcion] = useState('');
+  const [resumen, setResumen] = useState('');
   const [historial, setHistorial] = useState([]);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [cargandoResumen, setCargandoResumen] = useState(false);
 
   const manejarTranscripcion = async () => {
     setError('');
     setTranscripcion('');
+    setResumen('');
 
     if (!url) {
       setError('Por favor ingresa una URL.');
@@ -33,13 +36,61 @@ export default function Home() {
 
       const data = await response.json();
       setTranscripcion(data.transcripcion);
-      setHistorial([url, ...historial.slice(0, 4)]);
+      setHistorial(([url, ...historial]).slice(0, 5));
       setUrl('');
     } catch (err) {
       setError(err.message);
     } finally {
       setCargando(false);
     }
+  };
+
+  const generarResumen = async () => {
+    if (!transcripcion) {
+      setError('No hay transcripción para resumir.');
+      return;
+    }
+
+    setError('');
+    setResumen('');
+    setCargandoResumen(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/resumir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texto: transcripcion })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al generar el resumen.');
+      }
+
+      const data = await response.json();
+      setResumen(data.resumen);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCargandoResumen(false);
+    }
+  };
+
+  const borrarURL = () => {
+    setUrl('');
+    setTranscripcion('');
+    setResumen('');
+    setError('');
+  };
+
+  const descargarTXT = (contenido, nombreArchivo) => {
+    if (!contenido) return;
+
+    const blob = new Blob([contenido], { type: 'text/plain' });
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(blob);
+    enlace.download = nombreArchivo;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
   };
 
   return (
@@ -60,6 +111,12 @@ export default function Home() {
         >
           {cargando ? 'Procesando...' : 'Transcribir'}
         </button>
+        <button
+          onClick={borrarURL}
+          className="bg-gray-500 text-white px-4 py-2 rounded"
+        >
+          Borrar URL
+        </button>
       </div>
 
       {error && (
@@ -70,13 +127,41 @@ export default function Home() {
         <div className="mb-4">
           <h2 className="font-semibold mb-2">Transcripción:</h2>
           <pre className="whitespace-pre-wrap bg-gray-100 p-2 rounded">{transcripcion}</pre>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => descargarTXT(transcripcion, 'transcripcion.txt')}
+              className="bg-green-600 text-white px-4 py-2 rounded"
+            >
+              Descargar Transcripción
+            </button>
+            <button
+              onClick={generarResumen}
+              disabled={cargandoResumen}
+              className="bg-purple-600 text-white px-4 py-2 rounded"
+            >
+              {cargandoResumen ? 'Resumiendo...' : 'Generar Resumen Ejecutivo'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {resumen && (
+        <div className="mb-4">
+          <h2 className="font-semibold mb-2">Resumen Ejecutivo:</h2>
+          <pre className="whitespace-pre-wrap bg-gray-100 p-2 rounded">{resumen}</pre>
+          <button
+            onClick={() => descargarTXT(resumen, 'resumen_ejecutivo.txt')}
+            className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Descargar Resumen
+          </button>
         </div>
       )}
 
       {historial.length > 0 && (
         <div className="mb-4">
           <h2 className="font-semibold mb-2">Historial reciente:</h2>
-          <ul className="list-disc pl-5 space-y-1">
+          <ul className="list-decimal pl-5 space-y-1">
             {historial.map((item, index) => (
               <li key={index}>
                 <a href={item} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
