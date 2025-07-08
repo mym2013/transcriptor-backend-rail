@@ -4,53 +4,52 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const { spawn } = require('child_process');
+const sqlite3 = require('better-sqlite3');
+
+// Inicializar base de datos SQLite
+const db = new sqlite3('transcripciones.sqlite');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS transcripciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT,
+    texto TEXT,
+    fecha TEXT
+  )
+`);
 
 const app = express();
-
-/**
- * ===========================
- * 🔹 CORS CONFIGURACIÓN LOCAL
- * ===========================
- */
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   next();
 });
-
 app.use(express.json());
 
-/**
- * ===========================
- * 🔹 Endpoint para Transcribir
- * ===========================
- */
 app.post('/transcribir', async (req, res) => {
-  const { url } = req.body;
+  const { url, usarCookies } = req.body;
 
-  if (!url) {
-    return res.status(400).json({ error: 'URL no proporcionada' });
-  }
+  if (!url) return res.status(400).json({ error: 'URL no proporcionada' });
 
   const audioPath = path.join(__dirname, 'audio.mp3');
-
   console.log('✅ Descargando audio con yt-dlp...');
-  const ytdlp = spawn('yt-dlp', [
+
+  const ytdlpArgs = [
     url,
     '--extract-audio',
     '--audio-format', 'mp3',
     '--force-overwrites',
     '--no-cache-dir',
     '-o', 'audio.mp3'
-  ]);
+  ];
 
-  ytdlp.stdout.on('data', data => {
-    console.log(`yt-dlp stdout: ${data}`);
-  });
+  if (usarCookies) {
+    ytdlpArgs.splice(1, 0, '--cookies', 'cookies.txt');
+  }
 
-  ytdlp.stderr.on('data', data => {
-    console.error(`yt-dlp stderr: ${data}`);
-  });
+  const ytdlp = spawn('yt-dlp', ytdlpArgs);
+
+  ytdlp.stdout.on('data', data => console.log(`yt-dlp stdout: ${data}`));
+  ytdlp.stderr.on('data', data => console.error(`yt-dlp stderr: ${data}`));
 
   ytdlp.on('close', async code => {
     if (code !== 0) {
@@ -63,6 +62,49 @@ app.post('/transcribir', async (req, res) => {
       const OpenAI = require('openai');
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+      // Verificar tamaño
+      const stats = fs.statSync(audioPath);
+      if (stats.size > 25 * 1024 * 1024) {
+        console.warn('⚠️ Audio supera los 25MB. Dividiendo con FFmpeg...');
+        const tempDir = path.join(require('os').tmpdir(), 'chunks');
+        fs.mkdirSync(tempDir, { recursive: true });
+
+        const segmentCmd = [
+          '-i', 'audio.mp3',
+          '-f', 'segment',
+          '-segment_time', '300',
+          '-c', 'copy',
+          path.join(tempDir, 'chunk_%03d.mp3')
+        ];
+
+        await new Promise((resolve, reject) => {
+          const ffmpeg = spawn('ffmpeg', segmentCmd);
+          ffmpeg.stdout.on('data', d => console.log(`ffmpeg: ${d}`));
+          ffmpeg.stderr.on('data', d => console.log(`ffmpeg: ${d}`));
+          ffmpeg.on('close', code => code === 0 ? resolve() : reject());
+        });
+
+        const files = fs.readdirSync(tempDir).filter(f => f.endsWith('.mp3'));
+        let fullText = '';
+
+        for (const file of files) {
+          console.log(`🔹 Transcribiendo fragmento: ${file}`);
+          const transcription = await openai.audio.transcriptions.create({
+            file: fs.createReadStream(path.join(tempDir, file)),
+            model: 'whisper-1',
+            response_format: 'text'
+          });
+          fullText += transcription + '\n';
+        }
+
+        fs.writeFileSync('transcripcion.txt', fullText.trim());
+
+        // Guardar en base de datos
+        db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(url, fullText.trim(), new Date().toISOString());
+
+        return res.json({ transcripcion: fullText.trim() });
+      }
+
       console.log('✅ Transcribiendo audio con Whisper...');
       const transcription = await openai.audio.transcriptions.create({
         file: fs.createReadStream(audioPath),
@@ -70,8 +112,8 @@ app.post('/transcribir', async (req, res) => {
         response_format: 'text'
       });
 
-      fs.writeFileSync(path.join(__dirname, 'transcripcion.txt'), transcription);
-      console.log('✅ Transcripción completa.');
+      fs.writeFileSync('transcripcion.txt', transcription);
+      db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(url, transcription, new Date().toISOString());
 
       return res.json({ transcripcion: transcription });
 
@@ -82,33 +124,21 @@ app.post('/transcribir', async (req, res) => {
   });
 });
 
-/**
- * ===========================
- * 🔹 Endpoint para Resumir
- * ===========================
- */
 app.post('/resumir', async (req, res) => {
   const { texto } = req.body;
 
-  if (!texto) {
-    return res.status(400).json({ error: 'Texto no proporcionado' });
-  }
+  if (!texto) return res.status(400).json({ error: 'Texto no proporcionado' });
 
   try {
-    console.log('✅ Solicitando resumen ejecutivo a OpenAI...');
     const OpenAI = require('openai');
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo', // ✅ Usamos GPT-3.5 para evitar errores
+      model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
-          content: `Eres un asistente que crea resúmenes ejecutivos detallados de transcripciones. Quiero que generes un resumen estructurado y proporcional a la longitud del texto original. 
-- Si la transcripción es breve (menos de 300 palabras), resume en 1 párrafo.
-- Si es media (300–2000 palabras), resume en 3–5 párrafos.
-- Si es extensa (más de 2000 palabras), resume detalladamente en varios apartados o puntos clave.
-No omitas nombres ni detalles relevantes. Usa un estilo claro y profesional.`
+          content: `Eres un asistente que crea resúmenes ejecutivos detallados de transcripciones. Quiero que generes un resumen estructurado y proporcional a la longitud del texto original.`
         },
         {
           role: 'user',
@@ -117,9 +147,7 @@ No omitas nombres ni detalles relevantes. Usa un estilo claro y profesional.`
       ]
     });
 
-    const resumen = completion.choices[0].message.content;
-    console.log('✅ Resumen generado correctamente.');
-    res.json({ resumen });
+    res.json({ resumen: completion.choices[0].message.content });
 
   } catch (err) {
     console.error('Error al generar el resumen:', err);
@@ -127,13 +155,5 @@ No omitas nombres ni detalles relevantes. Usa un estilo claro y profesional.`
   }
 });
 
-/**
- * ===========================
- * 🔹 Levantar Servidor
- * ===========================
- */
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
-});
-
+app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
