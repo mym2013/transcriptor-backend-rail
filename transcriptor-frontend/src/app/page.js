@@ -27,7 +27,7 @@ export default function Home() {
       const response = await fetch('http://localhost:3001/transcribir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
+     body: JSON.stringify({ url, usarCookies: true })
       });
 
       if (!response.ok) {
