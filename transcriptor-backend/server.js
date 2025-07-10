@@ -25,9 +25,13 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
+/**
+ * ==============================
+ * 🔹 Endpoint para Transcripción
+ * ==============================
+ */
 app.post('/transcribir', async (req, res) => {
   const { url, usarCookies } = req.body;
-
   if (!url) return res.status(400).json({ error: 'URL no proporcionada' });
 
   const audioPath = path.join(__dirname, 'audio.mp3');
@@ -47,7 +51,6 @@ app.post('/transcribir', async (req, res) => {
   }
 
   const ytdlp = spawn('yt-dlp', ytdlpArgs);
-
   ytdlp.stdout.on('data', data => console.log(`yt-dlp stdout: ${data}`));
   ytdlp.stderr.on('data', data => console.error(`yt-dlp stderr: ${data}`));
 
@@ -62,7 +65,6 @@ app.post('/transcribir', async (req, res) => {
       const OpenAI = require('openai');
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-      // Verificar tamaño
       const stats = fs.statSync(audioPath);
       if (stats.size > 25 * 1024 * 1024) {
         console.warn('⚠️ Audio supera los 25MB. Dividiendo con FFmpeg...');
@@ -99,8 +101,12 @@ app.post('/transcribir', async (req, res) => {
 
         fs.writeFileSync('transcripcion.txt', fullText.trim());
 
-        // Guardar en base de datos
-        db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(url, fullText.trim(), new Date().toISOString());
+        // ✅ Guardar en base de datos
+        db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(
+          url,
+          fullText.trim(),
+          new Date().toISOString()
+        );
 
         return res.json({ transcripcion: fullText.trim() });
       }
@@ -113,7 +119,13 @@ app.post('/transcribir', async (req, res) => {
       });
 
       fs.writeFileSync('transcripcion.txt', transcription);
-      db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(url, transcription, new Date().toISOString());
+
+      // ✅ Guardar en base de datos
+      db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(
+        url,
+        transcription,
+        new Date().toISOString()
+      );
 
       return res.json({ transcripcion: transcription });
 
@@ -124,9 +136,13 @@ app.post('/transcribir', async (req, res) => {
   });
 });
 
+/**
+ * ===========================
+ * 🔹 Endpoint para Resumir
+ * ===========================
+ */
 app.post('/resumir', async (req, res) => {
   const { texto } = req.body;
-
   if (!texto) return res.status(400).json({ error: 'Texto no proporcionado' });
 
   try {
@@ -155,5 +171,11 @@ app.post('/resumir', async (req, res) => {
   }
 });
 
+/**
+ * ===========================
+ * 🔹 Iniciar Servidor
+ * ===========================
+ */
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
+
