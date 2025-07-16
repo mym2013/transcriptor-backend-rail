@@ -18,12 +18,29 @@ db.exec(`
 `);
 
 const app = express();
+
+// Middleware CORS con soporte para headers personalizados
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, x-access-key'
+  );
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
+
 app.use(express.json());
+
+// Middleware para validar clave de acceso
+app.use((req, res, next) => {
+  const userKey = req.headers['x-access-key'];
+  if (userKey !== process.env.ACCESS_KEY) {
+    return res.status(401).json({ error: 'Clave de acceso no válida' });
+  }
+  next();
+});
 
 /**
  * ==============================
@@ -101,7 +118,6 @@ app.post('/transcribir', async (req, res) => {
 
         fs.writeFileSync('transcripcion.txt', fullText.trim());
 
-        // ✅ Guardar en base de datos
         db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(
           url,
           fullText.trim(),
@@ -120,7 +136,6 @@ app.post('/transcribir', async (req, res) => {
 
       fs.writeFileSync('transcripcion.txt', transcription);
 
-      // ✅ Guardar en base de datos
       db.prepare('INSERT INTO transcripciones (url, texto, fecha) VALUES (?, ?, ?)').run(
         url,
         transcription,
@@ -178,4 +193,3 @@ app.post('/resumir', async (req, res) => {
  */
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
-
