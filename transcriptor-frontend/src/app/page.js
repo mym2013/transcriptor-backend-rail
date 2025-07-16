@@ -24,10 +24,13 @@ export default function Home() {
     setCargando(true);
 
     try {
-      const response = await fetch('http://localhost:3001/transcribir', {
+      const response = await fetch('https://transcriptor-backend-vkdb.onrender.com/transcribir', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({ url, usarCookies: true })
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-key': 'clave-gonzalo-2025'
+        },
+        body: JSON.stringify({ url, usarCookies: true })
       });
 
       if (!response.ok) {
@@ -56,9 +59,12 @@ export default function Home() {
     setCargandoResumen(true);
 
     try {
-      const response = await fetch('http://localhost:3001/resumir', {
+      const response = await fetch('https://transcriptor-backend-vkdb.onrender.com/resumir', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-key': 'clave-gonzalo-2025'
+        },
         body: JSON.stringify({ texto: transcripcion })
       });
 
