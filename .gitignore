@@ -43,3 +43,30 @@ herramientas/yt-dlp/
 decision_ramas_transcriptor.pdf
 www.youtube.com_cookies.txt
 *Documento de Cierre de Fase.txt
+
+
+# ---------------------------- ADICIONES DE LIMPIEZA ----------------------------
+
+# Archivos PDF y documentos de planificación no esenciales
+Plan_*
+Resumen*
+endpoints.pdf
+Guía Práctica endpoints.pdf
+*.postman_collection.json
+
+# Archivos README alternativos (evitar subir pruebas o duplicados)
+README_transcriptor-*.md
+
+# Archivos comprimidos o temporales
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# Salidas de pruebas o archivos generados
+output.txt
+transcripciones/
+
+# Otros archivos de ayuda que no se deberían commitear
+*.docx
+*.odt
