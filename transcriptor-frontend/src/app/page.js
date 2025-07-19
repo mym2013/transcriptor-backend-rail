@@ -24,7 +24,7 @@ export default function Home() {
     setCargando(true);
 
     try {
-      const response = await fetch('https://transcriptor-backend-vkdb.onrender.com/transcribir', {
+      const response = await fetch('https://transcriptor-rail.up.railway.app/transcribir', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export default function Home() {
     setCargandoResumen(true);
 
     try {
-      const response = await fetch('https://transcriptor-backend-vkdb.onrender.com/resumir', {
+      const response = await fetch('https://transcriptor-rail.up.railway.app/resumir', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,5 +181,6 @@ export default function Home() {
     </main>
   );
 }
+
 
 
