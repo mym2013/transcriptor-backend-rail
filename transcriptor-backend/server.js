@@ -4,18 +4,22 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const { spawn } = require('child_process');
-const sqlite3 = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 
 // Inicializar base de datos SQLite
-const db = new sqlite3('transcripciones.sqlite');
-db.exec(`
-  CREATE TABLE IF NOT EXISTS transcripciones (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url TEXT,
-    texto TEXT,
-    fecha TEXT
-  )
-`);
+const db = new sqlite3.Database('transcripciones.sqlite');
+
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS transcripciones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT,
+      texto TEXT,
+      fecha TEXT
+    )
+  `);
+});
+
 
 const app = express();
 
