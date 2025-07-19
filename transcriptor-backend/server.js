@@ -6,9 +6,7 @@ require('dotenv').config();
 const { spawn } = require('child_process');
 const sqlite3 = require('sqlite3').verbose();
 
-// Inicializar base de datos SQLite
 const db = new sqlite3.Database('transcripciones.sqlite');
-
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS transcripciones (
@@ -20,10 +18,8 @@ db.serialize(() => {
   `);
 });
 
-
 const app = express();
 
-// Middleware CORS con soporte para headers personalizados
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header(
@@ -37,7 +33,6 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// Middleware para validar clave de acceso
 app.use((req, res, next) => {
   const userKey = req.headers['x-access-key'];
   if (userKey !== process.env.ACCESS_KEY) {
@@ -46,11 +41,6 @@ app.use((req, res, next) => {
   next();
 });
 
-/**
- * ==============================
- * 🔹 Endpoint para Transcripción
- * ==============================
- */
 app.post('/transcribir', async (req, res) => {
   const { url, usarCookies } = req.body;
   if (!url) return res.status(400).json({ error: 'URL no proporcionada' });
@@ -155,11 +145,6 @@ app.post('/transcribir', async (req, res) => {
   });
 });
 
-/**
- * ===========================
- * 🔹 Endpoint para Resumir
- * ===========================
- */
 app.post('/resumir', async (req, res) => {
   const { texto } = req.body;
   if (!texto) return res.status(400).json({ error: 'Texto no proporcionado' });
@@ -190,10 +175,9 @@ app.post('/resumir', async (req, res) => {
   }
 });
 
-/**
- * ===========================
- * 🔹 Iniciar Servidor
- * ===========================
- */
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
+
+// 🚨 Mínima instrucción para evitar que Railway cierre el contenedor por inactividad
+setInterval(() => {}, 1000 * 60 * 60);
+
